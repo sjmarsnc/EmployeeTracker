@@ -6,28 +6,32 @@ USE employee_db;
 
 CREATE TABLE department (
   id INTEGER NOT NULL AUTO_INCREMENT,
-  name VARCHAR(45) NULL,
+  name VARCHAR(45) NOT NULL,
   PRIMARY KEY (id)
 );
  
 CREATE TABLE role (
     id INTEGER NOT NULL AUTO_INCREMENT, 
-    title VARCHAR(40), 
-    salary DECIMAL, 
-    department_id INT, 
+    title VARCHAR(40) NOT NULL, 
+    salary DECIMAL NOT NULL, 
+    department_id INT NOT NULL,
+    INDEX dep_ind (department_id),  
     PRIMARY KEY (id), 
-    FOREIGN KEY (department_id)
-        REFERENCES department(id)
-);
+    CONSTRAINT fk_department FOREIGN KEY (department_id)
+        REFERENCES department(id) ON DELETE CASCADE
+  );
+
+-- DELETE CASCADE above - if you delete the department, all roles will be deleted for that department 
 
 CREATE TABLE employee (
-    id INTEGER NOT NULL AUTO_INCREMENT, 
-    first_name VARCHAR(40), 
-    last_name VARCHAR(40), 
-    role_id INT, 
+    id INTEGER  AUTO_INCREMENT PRIMARY KEY, 
+    first_name VARCHAR(40) NOT NULL, 
+    last_name VARCHAR(40) NOT NULL, 
+    role_id INT NOT NULL, 
     manager_id INT, 
-    PRIMARY KEY (id), 
-    FOREIGN KEY (role_id)
-        REFERENCES role (id)    
+    CONSTRAINT fk_role FOREIGN KEY (role_id)
+        REFERENCES role (id) ON DELETE CASCADE, 
+    CONSTRAINT fk_manager FOREIGN KEY (manager_id) REFERENCES employee(id) ON DELETE SET NULL    
 ); 
 
+-- DELETE SET NULL says if you delete the manager, the manager_id on any employees is set to null 
