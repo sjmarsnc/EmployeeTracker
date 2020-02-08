@@ -26,7 +26,7 @@ connection.connect (function(err) {
 
 var roles = []; 
 var departments = [];  
-var employees = ["John Doe","Jane Smith", "Will Riker"];  // employee objects 
+var employees = [];  // employee objects 
 var empNames =[]; 
 
 function loadRoles () { 
@@ -153,7 +153,7 @@ const updateEmpQuestions = [
     }
 ];
 
-const updateEmpManager = [
+const updateEmpMgrQuestions = [
     {
         type: "list",
         name: "mgr",
@@ -162,7 +162,16 @@ const updateEmpManager = [
     }
 ];
 
-const updateEmpRole = [
+const updateEmpRoleQuestions = [
+    {
+        type: "list", 
+        name: "role",
+        message: "Select the role for this employee:", 
+        choices: roles
+    }
+];
+
+const updateRoleSalaryQuestions = [
     {
         type: "list", 
         name: "role",
@@ -189,6 +198,7 @@ function addEmp() {
               console.log("The employee was successfully added!");
             }
           );
+          doSomething(); 
     });
 }
 
@@ -201,9 +211,9 @@ function addRole() {
             function (err) {
               if (err) throw err;
               console.log("The role was successfully added!");
-              doSomething(); 
             }
-          );
+            );
+            doSomething(); 
     });
 }
 
@@ -217,10 +227,12 @@ function addDepartment() {
               console.log("The department was successfully added!");
             }
           );
+          doSomething();  
     });
 }
 
-function showAllEmps() {
+function showAllEmps(orderClause) {
+    if (orderClause === undefined) orderClause = '';  
     connection.query(
     `SELECT E.id, E.first_name, E.last_name, E.role_id, E.manager_id,
        R.title AS role, R.salary AS salary, 
@@ -229,10 +241,9 @@ function showAllEmps() {
       FROM employee AS E 
         INNER JOIN role AS R ON E.role_id = R.id  
         INNER JOIN department AS D ON R.department_id = D.id
-        INNER JOIN employee AS M on E.manager_id = M.id`, 
+        INNER JOIN employee AS M on E.manager_id = M.id ${orderClause}`, 
       function (err, res) {
           if (err) console.log(err);  
-          console.log(res); 
           console.table(
             res.map(emp => {
               return {
@@ -243,40 +254,33 @@ function showAllEmps() {
                 "Department": emp.department
               };
             }));
-           
-          
-           
-        //   console.log(
-        //       res.map(emp => {
-        //         return {
-        //           "ID": emp.id,
-        //           "First Name": emp.first_name,
-        //           "Last Name": emp.last_name,
-        //           "Salary": emp.salary,
-        //           "Manager": emp.manager,
-        //           "Department": emp.department
-        //         };
-              })
+    
+            doSomething();  
+        });
             
         } 
      
     
 function showByManager() {
-    console.log("Not yet done"); 
+    showAllEmps('ORDER BY manager');  
+    doSomething(); 
 }
 
 function showByDepartment() {
-    console.log("Not yet done"); 
+    showAllEmps('ORDER BY department')
+    doSomething();  
 }
 
 function showDepartments() { 
     console.log("Departments:\n"); 
     for (let i=0; i < departments.length; i++)  console.log(departments[i]);  
+    doSomething(); 
 }
 
 function showRoles() { 
     console.log("Roles:\n");
     for (let i=0; i < roles.length; i++) console.log(roles[i]);  
+    doSomething(); 
 }
 
 function remEmp() {
@@ -293,6 +297,25 @@ function remEmp() {
               console.log("The employee was successfully removed!");
             }
           );
+        doSomething();  
+    });  
+}
+
+function updateRoleSalary() {
+    inquirer.prompt(remEmpQuestions)
+    .then(function (answer) {
+
+        let pickedEmp = employees.find( emp => emp.getFullName() === answer.emp);
+        console.log(pickedEmp, answer);  
+        let id = pickedEmp.id;    
+        connection.query(
+            `DELETE FROM employee WHERE id = ${id}`,
+            function (err) {
+              if (err) throw err;
+              console.log("The employee was successfully removed!");
+            }
+          );
+        doSomething();  
     });  
 }
 
@@ -308,7 +331,7 @@ function start() {
     loadRoles(); 
     loadEmployees(); 
     
-    showAllEmps();     
+    doSomething();     
 }
 
 // loop through available tasks until user chooses to quit 
@@ -339,7 +362,7 @@ function doSomething() {
             case "Update employee manager": 
                 updateEmpManager(); break;  
             case "Update role salary":
-                updateEmpRole(); break; 
+                updateRoleSalary(); break; 
             case "View department utilized budget":
                 showDepartmentSalaries(); break;   
             case "Quit":  let i = 1;  
@@ -348,7 +371,7 @@ function doSomething() {
                 // how to stop the program? 
             default:  break; 
         }
-        doSomething(); 
+        // doSomething(); 
         }
     );
 }
