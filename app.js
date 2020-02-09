@@ -1,62 +1,38 @@
-var mysql = require("mysql");
+// var mysql = require("mysql");
 var inquirer = require("inquirer");
 var Employee = require("./lib/Employee");
 const cTable = require('console.table');
+var loadData = require("./lib/loadData");
 
+var connection = require("./connection");
 // create the connection information for the sql database
-var connection = mysql.createConnection({
-  host: "localhost",
+// var connection = mysql.createConnection({
+//   host: "localhost",
 
-  // Your port; if not 3306
-  port: 3306,
+//   // Your port; if not 3306
+//   port: 3306,
 
-  // Your username
-  user: "root",
+//   // Your username
+//   user: "root",
 
-  // Your password
-  password: "Emrys1960!",
-  database: "employee_db"
-});
+//   // Your password
+//   password: "Emrys1960!",
+//   database: "employee_db"
+// });
+
+
+var roles = []; 
+var roleNames = []; 
+var departments = []; 
+var deptNames = [] ;  
+var employees = [];  // array of employee objects 
+var empNames = []; 
 
 connection.connect (function(err) {
     if (err) throw err;
     // run the start function after the connection is made to prompt the user
     start();
 });
-
-var roles = []; 
-var departments = [];  
-var employees = [];  // employee objects 
-var empNames =[]; 
-
-function loadRoles () { 
-   connection.query("SELECT title FROM role", function (err, res) {
-       if (err) throw err;
-       res.forEach(role_row => roles.push(role_row.title)); 
-    //    console.log("Roles:\n", roles); 
-    }
-   );
-} 
-
-function loadDepartments () { 
-    connection.query("SELECT name FROM department", function (err, res) {
-        if (err) throw err;
-        res.forEach(dept => departments.push(dept.name)); 
-        // console.log("Departments:\n", departments); 
-    }
-    );
-}
-
-function loadEmployees () {
-    connection.query("SELECT id, first_name, last_name, role_id, manager_id  FROM employee", function (err, res) {
-        if (err) throw err;
-        employees = res.map( emp => new Employee(emp.id, emp.first_name, emp.last_name, emp.role_id, emp.manager_id))
-        // console.log("Employees:\n", employees); 
-        // create array to use for choices 
-        empNames = employees.map( emp => emp.getFullName() );
-    }
-    );
-}
 
 const firstQuestion = [{
     type: "list", 
@@ -67,6 +43,7 @@ const firstQuestion = [{
               "View all employees by manager", 
               "View all departments",
               "View all roles", 
+              "View total salary budget per department",
               "Add an employee", 
               "Add a department",
               "Add a role",
@@ -77,31 +54,6 @@ const firstQuestion = [{
               "Quit"]
 }];
 
-const addEmpQuestions = [
-    { 
-    type: "input", 
-    name: "first", 
-    message: "What is the employee's first name?"
-    },
-    { 
-    type: "input",
-    name: "last", 
-    message: "What is the employee's last name?"
-}, 
-{
-    type: "input", 
-    name: "role",
-    message: "Select the employee's role", 
-    choices: roles
-}, 
-{
-    type: "list",
-    name: "manager",
-    message: "Select the employee's manager", 
-    choices: employees
-}
-];  
-
 const addDeptQuestions = [
     { 
         type: "input", 
@@ -110,96 +62,41 @@ const addDeptQuestions = [
     }
 ]; 
 
-const addRoleQuestions = [
-    { 
-        type: "input", 
-        name: "title", 
-        message: "What is the title of the new role?"
-    },
-    { 
-    type: "number",
-    name: "salary", 
-    message: "What is the salary for this role?"
-},
-{ 
-    type: "list",
-    name: "department", 
-    message: "What department does this role belong to?",
-    choices: departments
-}
-];
 
-const remEmpQuestions = [
-    {
-        type: "list",
-        name: "emp", 
-        message: "Which employee do you want to remove?",
-        choices: empNames
-    }
-];
+// questions that will be generated after data is loaded 
+let addEmpQuestions = [];
+let addRoleQuestions = []; 
 
-const updateEmpQuestions = [
-    {
-        type: "list",
-        name: "emp", 
-        message: "Which employee do you want to update?",
-        choices: empNames
-    },
-    {
-        type: "list", 
-        name: "emp", 
-        message: "Would you like to update manager or role?", 
-        choices: ["manager","role"]
-    }
-];
+let remEmpQuestions = [];
+let updateEmpQuestions = [];
+ 
+let updateEmpMgrQuestions = [];
+let updateEmpRoleQuestions = [];
 
-const updateEmpMgrQuestions = [
-    {
-        type: "list",
-        name: "mgr",
-        message: "Who is the manager of this employee?",
-        choices: empNames
-    }
-];
-
-const updateEmpRoleQuestions = [
-    {
-        type: "list", 
-        name: "role",
-        message: "Select the role for this employee:", 
-        choices: roles
-    }
-];
-
-const updateRoleSalaryQuestions = [
-    {
-        type: "list", 
-        name: "role",
-        message: "Select the role for this employee:", 
-        choices: roles
-    }
-];
 
 function addEmp() {
-    inquirer.prompt(addEmpQuestions).then(function(answer) {
-        // have to get id for employee's manager, can't do subquery with the same table 
-        // this only allows for one "first" name and multiple last names....so someone like Billie Jo Smith wouldn't work.    
-        let mgr_names = answer.mgr.split(' ');  
-        let mgr_first = mgr_names[0]; 
-        let mgr_last  = mgr_names.splice(1).join(" "); 
-        connection.query(
-            `SELECT id INTO @mgrid FROM employee WHERE first_name = "${mgr_first}" AND last_name = "${mgr_last}"; 
-            
-            INSERT INTO employee (first_name, last_name, role_id, manager_id) 
-                VALUES( "${first_name}", "${last_name}", 
-                (SELECT id FROM role WHERE title = ${role}), @mgrid);`,
-            function (err) {
-              if (err) throw err;
-              console.log("The employee was successfully added!");
-            }
-          );
-          doSomething(); 
-    });
+
+        inquirer.prompt(addEmpQuestions).then(function(answer) {
+            // have to get id for employee's manager, can't do subquery with the same table 
+            // this only allows for one "first" name and multiple last names....so someone like Billie Jo Smith wouldn't work.    
+            let mgr_names = answer.mgr.split(' ');  
+            let mgr_first = mgr_names[0]; 
+            let mgr_last  = mgr_names.splice(1).join(" "); 
+            connection.query(
+                `SELECT id INTO @mgrid FROM employee WHERE first_name = "${mgr_first}" AND last_name = "${mgr_last}"; 
+                
+                INSERT INTO employee (first_name, last_name, role_id, manager_id) 
+                    VALUES( "${first_name}", "${last_name}", 
+                    (SELECT id FROM role WHERE title = ${role}), @mgrid);`,
+                function (err) {
+                  if (err) throw err;
+                  console.log("The employee was successfully added!");
+                }
+              );
+              doSomething(); 
+        });
+    // })
+
 }
 
 function addRole() { 
@@ -243,7 +140,10 @@ function showAllEmps(orderClause) {
         INNER JOIN department AS D ON R.department_id = D.id
         INNER JOIN employee AS M on E.manager_id = M.id ${orderClause}`, 
       function (err, res) {
-          if (err) console.log(err);  
+          if (err) console.log(err); 
+          let title = "\nAll Employees "; 
+          if (orderClause !== '') title += orderClause + "\n===========================";   
+          console.log(title)
           console.table(
             res.map(emp => {
               return {
@@ -272,18 +172,44 @@ function showByDepartment() {
 }
 
 function showDepartments() { 
-    console.log("Departments:\n"); 
-    for (let i=0; i < departments.length; i++)  console.log(departments[i]);  
+    console.log("\nDepartments:\n"); 
+    for (let i=0; i < deptNames.length; i++)  console.log(deptNames[i]);  
     doSomething(); 
 }
 
 function showRoles() { 
-    console.log("Roles:\n");
-    for (let i=0; i < roles.length; i++) console.log(roles[i]);  
+    console.log("\nRoles:\n");
+    for (let i=0; i < roleNames.length; i++) console.log(roleNames[i]);  
     doSomething(); 
 }
 
+function showDepartmentSalaryTotal() {
+     
+    connection.query(
+    `SELECT SUM(R.salary) AS total_salary, 
+       D.name AS department
+       FROM employee AS E 
+       INNER JOIN role AS R ON E.role_id = R.id  
+       INNER JOIN department AS D ON R.department_id = D.id
+       INNER JOIN employee AS M on E.manager_id = M.id 
+       GROUP BY D.name;    `, 
+      function (err, res) {
+          if (err) console.log(err);  
+          console.log("\n");
+          console.table(
+            res.map(dept => {
+              return {
+                "Department": dept.department,
+                "Total Salary": dept.total_salary
+              };
+            }));
+    
+            doSomething();  
+        });
+            
+        } 
 function remEmp() {
+    console.log("empNames:\n", empNames);  
     inquirer.prompt(remEmpQuestions)
     .then(function (answer) {
 
@@ -301,8 +227,26 @@ function remEmp() {
     });  
 }
 
-function updateRoleSalary() {
-    inquirer.prompt(remEmpQuestions)
+function updateEmpRole() {
+    inquirer.prompt(updateEmpRoleQuestions)
+    .then(function (answer) {
+        
+        let pickedEmp = employees.find( emp => emp.getFullName() === answer.emp);
+        console.log(pickedEmp, answer);  
+        let id = pickedEmp.id;    
+        connection.query(
+            `DELETE FROM employee WHERE id = ${id}`,
+            function (err) {
+              if (err) throw err;
+              console.log("The employee was successfully removed!");
+            }
+          );
+        doSomething();  
+    });  
+}
+
+function updateEmpManager() {
+    inquirer.prompt(updateEmpMgrQuestions)
     .then(function (answer) {
 
         let pickedEmp = employees.find( emp => emp.getFullName() === answer.emp);
@@ -318,21 +262,190 @@ function updateRoleSalary() {
         doSomething();  
     });  
 }
-
-// function showAll() {
-//     console.log("Not yet done"); 
-// }
 
 
 
 function start() {
 
-    loadDepartments(); 
-    loadRoles(); 
-    loadEmployees(); 
+    loadData.loadDepartments().then( function (departments) {
+
+        deptNames = departments.map( dept => dept[1]); 
+        addRoleQuestions = [
+            { 
+                type: "input", 
+                name: "title", 
+                message: "What is the title of the new role?"
+            },
+            { 
+            type: "number",
+            name: "salary", 
+            message: "What is the salary for this role?"
+        },
+        { 
+            type: "list",
+            name: "department", 
+            message: "What department does this role belong to?",
+            choices: deptNames
+        }
+        ];
+         
+        loadData.loadRoles().then( function (roles) {
+            roleNames = roles.map ( role => role[1]);  
+            updateEmpRoleQuestions = [
+                {
+                    type: "list", 
+                    name: "role",
+                    message: "Select the role for this employee:", 
+                    choices: roleNames
+                }
+            ];
+            addRoleQuestions = [
+                { 
+                    type: "input", 
+                    name: "title", 
+                    message: "What is the title of the new role?"
+                },
+                { 
+                    type: "number",
+                    name: "salary", 
+                    message: "What is the salary for this role?"
+                },
+                { 
+                    type: "list",
+                    name: "department", 
+                    message: "What department does this role belong to?",
+                    choices: departments
+                }
+            ];
+
+            loadData.loadEmployees().then (function (employees) {
+                empNames = employees.map ( emp => emp.getFullName());  
+                addEmpQuestions = [
+                    { 
+                    type: "input", 
+                    name: "first", 
+                    message: "What is the employee's first name?"
+                    },
+                    { 
+                    type: "input",
+                    name: "last", 
+                    message: "What is the employee's last name?"
+                }, 
+                {
+                    type: "list", 
+                    name: "role",
+                    message: "Select the employee's role", 
+                    choices: roleNames
+                }, 
+                {
+                    type: "list",
+                    name: "manager",
+                    message: "Select the employee's manager", 
+                    choices: empNames
+                }
+                ];  
+                remEmpQuestions = [
+                    {
+                        type: "list",
+                        name: "emp", 
+                        message: "Which employee do you want to remove?",
+                        choices: empNames
+                    }
+                ];
+                
+                updateEmpQuestions = [
+                    {
+                        type: "list",
+                        name: "emp", 
+                        message: "Which employee do you want to update?",
+                        choices: empNames
+                    },
+                    {
+                        type: "list", 
+                        name: "emp", 
+                        message: "Would you like to update manager or role?", 
+                        choices: ["manager","role"]
+                    }
+                ];
+                
+                updateEmpMgrQuestions = [
+                    {
+                        type: "list",
+                        name: "mgr",
+                        message: "Who is the manager of this employee?",
+                        choices: empNames
+                    }
+                ];
+                
+                updateEmpRoleQuestions = [
+                    {
+                        type: "list", 
+                        name: "role",
+                        message: "Select the role for this employee:", 
+                        choices: roles
+                    }
+                ];
+                
+                remEmpQuestions = [
+                    {
+                        type: "list",
+                        name: "emp", 
+                        message: "Which employee do you want to remove?",
+                        choices: empNames
+                    }
+                ];
+                
+                updateEmpQuestions = [
+                    {
+                        type: "list",
+                        name: "emp", 
+                        message: "Which employee do you want to update?",
+                        choices: empNames
+                    },
+                    {
+                        type: "list", 
+                        name: "emp", 
+                        message: "Would you like to update manager or role?", 
+                        choices: ["manager","role"]
+                    }
+                ];
+                
+                updateEmpMgrQuestions = [
+                    {
+                        type: "list",
+                        name: "mgr",
+                        message: "Who is the manager of this employee?",
+                        choices: empNames
+                    }
+                ];
+
+                updateEmpMgrQuestions = [
+                    {
+                        type: "list",
+                        name: "mgr",
+                        message: "Who is the manager of this employee?",
+                        choices: empNames
+                    }
+                ];
+                
+                updateEmpRoleQuestions = [
+                    {
+                        type: "list", 
+                        name: "role",
+                        message: "Select the role for this employee:", 
+                        choices: roles
+                    }
+                ];
+
+                doSomething();  
+                   
+            }) ; 
+        }); 
+
+    }); 
     
-    doSomething();     
 }
+
 
 // loop through available tasks until user chooses to quit 
 function doSomething() {
@@ -349,6 +462,8 @@ function doSomething() {
                 showDepartments();  break; 
             case "View all roles": 
                 showRoles(); break;  
+            case "View total salary budget per department": 
+                showDepartmentSalaryTotal();  break; 
             case "Add an employee":
                addEmp();  break; 
             case "Add a role":
