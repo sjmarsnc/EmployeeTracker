@@ -11,10 +11,11 @@ var connection = mysql.createConnection({
     user: "root",
   
     // Your password
-    password: "Emrys1960!",
-    database: "employee_db"
+    password: "",
+    database: "employee_db",
+    multipleStatements: true
   });
   
 
 
-  module.exports = connection;  
+  module.exports = connection;

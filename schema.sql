@@ -35,3 +35,13 @@ CREATE TABLE employee (
 ); 
 
 -- DELETE SET NULL says if you delete the manager, the manager_id on any employees is set to null 
+
+CREATE VIEW allemp AS SELECT E.id, E.first_name, E.last_name, E.role_id, E.manager_id,
+       CONCAT (E.first_name, ' ', E.last_name) as fullname, 
+       R.title AS role, R.salary AS salary, 
+       D.name AS department, 
+       CONCAT(M.first_name, ' ', M.last_name) AS manager   
+      FROM employee AS E 
+        INNER JOIN role AS R ON E.role_id = R.id  
+        INNER JOIN department AS D ON R.department_id = D.id
+        INNER JOIN employee AS M on E.manager_id = M.id 

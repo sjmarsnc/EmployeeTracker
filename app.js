@@ -5,21 +5,6 @@ const cTable = require('console.table');
 var loadData = require("./lib/loadData");
 
 var connection = require("./connection");
-// create the connection information for the sql database
-// var connection = mysql.createConnection({
-//   host: "localhost",
-
-//   // Your port; if not 3306
-//   port: 3306,
-
-//   // Your username
-//   user: "root",
-
-//   // Your password
-//   password: "Emrys1960!",
-//   database: "employee_db"
-// });
-
 
 var roles = []; 
 var roleNames = []; 
@@ -48,6 +33,8 @@ const firstQuestion = [{
               "Add a department",
               "Add a role",
               "Remove an employee", 
+              "Remove a department", 
+              "Remove a role",
               "Update employee role", 
               "Update employee manager", 
               "Update role salary",
@@ -66,10 +53,10 @@ const addDeptQuestions = [
 // questions that will be generated after data is loaded 
 let addEmpQuestions = [];
 let addRoleQuestions = []; 
-
+let remRoleQuestions = []; 
 let remEmpQuestions = [];
+let remDeptQuestions = []; 
 let updateEmpQuestions = [];
- 
 let updateEmpMgrQuestions = [];
 let updateEmpRoleQuestions = [];
 
@@ -77,23 +64,17 @@ let updateEmpRoleQuestions = [];
 function addEmp() {
 
         inquirer.prompt(addEmpQuestions).then(function(answer) {
-            // have to get id for employee's manager, can't do subquery with the same table 
-            // this only allows for one "first" name and multiple last names....so someone like Billie Jo Smith wouldn't work.    
-            let mgr_names = answer.mgr.split(' ');  
-            let mgr_first = mgr_names[0]; 
-            let mgr_last  = mgr_names.splice(1).join(" "); 
+
             connection.query(
-                `SELECT id INTO @mgrid FROM employee WHERE first_name = "${mgr_first}" AND last_name = "${mgr_last}"; 
-                
-                INSERT INTO employee (first_name, last_name, role_id, manager_id) 
-                    VALUES( "${first_name}", "${last_name}", 
-                    (SELECT id FROM role WHERE title = ${role}), @mgrid);`,
+                `INSERT INTO employee (first_name, last_name, role_id, manager_id) 
+                    VALUES( "${answer.first}", "${answer.last}", 
+                    (SELECT id FROM role WHERE title = "${answer.role}"), (SELECT id FROM allemp WHERE fullname = "${answer.manager}"));`,
                 function (err) {
                   if (err) throw err;
                   console.log("The employee was successfully added!");
+                  doSomething(); 
                 }
               );
-              doSomething(); 
         });
     // })
 
@@ -101,20 +82,22 @@ function addEmp() {
 
 function addRole() { 
     inquirer.prompt(addRoleQuestions).then(function(answer) {
+        console.log ("Adding a role to ", answer.department);
         connection.query(
             `INSERT INTO role (title, salary, department_id) 
                 VALUES( "${answer.title}", ${answer.salary}, 
-                (SELECT id FROM department WHERE name = ${answer.department}));`,
+                (SELECT id FROM department WHERE name = "${answer.department}"));`,
             function (err) {
               if (err) throw err;
               console.log("The role was successfully added!");
+              roleNames.push(answer.title);  
+              doSomething(); 
             }
             );
-            doSomething(); 
     });
 }
 
-function addDepartment() { 
+function addDept() { 
     inquirer.prompt(addDeptQuestions).then(function (answer) {
         connection.query(
             `INSERT INTO department (name) 
@@ -122,9 +105,10 @@ function addDepartment() {
             function (err) {
               if (err) throw err;
               console.log("The department was successfully added!");
+              deptNames.push(answer.department); 
+              doSomething();  
             }
           );
-          doSomething();  
     });
 }
 
@@ -183,7 +167,7 @@ function showRoles() {
     doSomething(); 
 }
 
-function showDepartmentSalaryTotal() {
+function showDeptSalaryTotal() {
      
     connection.query(
     `SELECT SUM(R.salary) AS total_salary, 
@@ -209,21 +193,53 @@ function showDepartmentSalaryTotal() {
             
         } 
 function remEmp() {
-    console.log("empNames:\n", empNames);  
+
     inquirer.prompt(remEmpQuestions)
     .then(function (answer) {
-
-        let pickedEmp = employees.find( emp => emp.getFullName() === answer.emp);
-        console.log(pickedEmp, answer);  
-        let id = pickedEmp.id;    
+        console.log("Removing ",answer.emp); 
         connection.query(
-            `DELETE FROM employee WHERE id = ${id}`,
+            `SELECT id FROM allemp WHERE fullname = "${answer.emp}" INTO @empid; 
+            DELETE FROM employee WHERE id = @empid`,
             function (err) {
               if (err) throw err;
-              console.log("The employee was successfully removed!");
+              console.log(`Employee ${answer.emp} was successfully removed!`);
+              doSomething();  
             }
           );
-        doSomething();  
+    });  
+}
+
+function remRole() {
+
+    inquirer.prompt(remRoleQuestions)
+    .then(function (answer) {
+        console.log("Removing ",answer.role); 
+        connection.query(
+            `DELETE FROM role WHERE title = "${answer.role}"`,
+            function (err) {
+              if (err) throw err;
+              console.log(`Role ${answer.emp} was successfully removed!`);
+              roleNames.splice( roleNames.findIndex(  (role) => role === answer.role) , 1);
+              doSomething();  
+              }
+          );
+    });  
+}
+
+function remDepartment() {
+
+    inquirer.prompt(remDeptQuestions)
+    .then(function (answer) {
+        console.log("Removing ",answer.dept); 
+        connection.query(
+            `DELETE FROM department WHERE name = "${answer.dept}"`,
+            function (err) {
+              if (err) throw err;
+              console.log(`Department ${answer.dept} was successfully removed!`);
+              deptNames.splice( deptNames.findIndex(  (dept) => dept === answer.dept) , 1); 
+              doSomething();  
+            }
+          );
     });  
 }
 
@@ -235,10 +251,10 @@ function updateEmpRole() {
         console.log(pickedEmp, answer);  
         let id = pickedEmp.id;    
         connection.query(
-            `DELETE FROM employee WHERE id = ${id}`,
+            `UPDATE FROM employee WHERE id = ${id}`,
             function (err) {
               if (err) throw err;
-              console.log("The employee was successfully removed!");
+              console.log("The employee was successfully updated!");
             }
           );
         doSomething();  
@@ -253,10 +269,10 @@ function updateEmpManager() {
         console.log(pickedEmp, answer);  
         let id = pickedEmp.id;    
         connection.query(
-            `DELETE FROM employee WHERE id = ${id}`,
+            `UPDATE FROM employee WHERE id = ${id}.....`,
             function (err) {
               if (err) throw err;
-              console.log("The employee was successfully removed!");
+              console.log("The employee was successfully updated!");
             }
           );
         doSomething();  
@@ -288,6 +304,15 @@ function start() {
             choices: deptNames
         }
         ];
+
+        remDeptQuestions = [
+            {
+                type: "list", 
+                name: "dept",
+                message: "Which department do you want to remove?", 
+                choices: deptNames
+            }
+        ];
          
         loadData.loadRoles().then( function (roles) {
             roleNames = roles.map ( role => role[1]);  
@@ -299,22 +324,12 @@ function start() {
                     choices: roleNames
                 }
             ];
-            addRoleQuestions = [
-                { 
-                    type: "input", 
-                    name: "title", 
-                    message: "What is the title of the new role?"
-                },
-                { 
-                    type: "number",
-                    name: "salary", 
-                    message: "What is the salary for this role?"
-                },
-                { 
-                    type: "list",
-                    name: "department", 
-                    message: "What department does this role belong to?",
-                    choices: departments
+            remRoleQuestions = [
+                {
+                    type: "list", 
+                    name: "role",
+                    message: "Which role do you want to remove?", 
+                    choices: roleNames
                 }
             ];
 
@@ -382,7 +397,7 @@ function start() {
                         type: "list", 
                         name: "role",
                         message: "Select the role for this employee:", 
-                        choices: roles
+                        choices: roleNames
                     }
                 ];
                 
@@ -433,7 +448,7 @@ function start() {
                         type: "list", 
                         name: "role",
                         message: "Select the role for this employee:", 
-                        choices: roles
+                        choices: roleNames
                     }
                 ];
 
@@ -463,15 +478,19 @@ function doSomething() {
             case "View all roles": 
                 showRoles(); break;  
             case "View total salary budget per department": 
-                showDepartmentSalaryTotal();  break; 
+                showDeptSalaryTotal();  break; 
             case "Add an employee":
                addEmp();  break; 
             case "Add a role":
                addRole();  break;
             case "Add a department": 
-               addDepartment(); break;        
+               addDept(); break;        
             case "Remove an employee": 
                remEmp(); break;  
+            case "Remove a department": 
+               remDepartment(); break;  
+            case "Remove a role": 
+               remRole(); break;  
             case "Update employee role": 
                updateEmpRole(); break;   
             case "Update employee manager": 
@@ -481,8 +500,8 @@ function doSomething() {
             case "View department utilized budget":
                 showDepartmentSalaries(); break;   
             case "Quit":  let i = 1;  
-                // connection.end( err => console.log(err)); 
-                // process.exit();  
+                connection.end( err => console.log(err)); 
+                process.exit();  
                 // how to stop the program? 
             default:  break; 
         }
