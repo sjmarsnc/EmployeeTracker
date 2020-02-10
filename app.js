@@ -56,22 +56,25 @@ let addRoleQuestions = [];
 let remRoleQuestions = []; 
 let remEmpQuestions = [];
 let remDeptQuestions = []; 
-let updateEmpQuestions = [];
 let updateEmpMgrQuestions = [];
 let updateEmpRoleQuestions = [];
+let updateRoleQuestions = [];  
 
 
 function addEmp() {
 
         inquirer.prompt(addEmpQuestions).then(function(answer) {
-
+            const { first, last, role, manager} = answer; 
             connection.query(
                 `INSERT INTO employee (first_name, last_name, role_id, manager_id) 
-                    VALUES( "${answer.first}", "${answer.last}", 
-                    (SELECT id FROM role WHERE title = "${answer.role}"), (SELECT id FROM allemp WHERE fullname = "${answer.manager}"));`,
-                function (err) {
+                    VALUES( "${first}", "${last}", 
+                    (SELECT id FROM role WHERE title = "${role}"), (SELECT id FROM allemp WHERE fullname = "${manager}"));`,
+                function (err, res) {
                   if (err) throw err;
+                  let newEmp = new Employee(res.insertId, first, last );  
                   console.log("The employee was successfully added!");
+                  employees.push(newEmp);
+                  empNames.push(newEmp.getFullName());
                   doSomething(); 
                 }
               );
@@ -200,9 +203,11 @@ function remEmp() {
         connection.query(
             `SELECT id FROM allemp WHERE fullname = "${answer.emp}" INTO @empid; 
             DELETE FROM employee WHERE id = @empid`,
-            function (err) {
+            function (err, res) {
               if (err) throw err;
-              console.log(`Employee ${answer.emp} was successfully removed!`);
+              if (res.affectedRows === 0) console.log ("Employee record not found.");    
+                 else console.log(`Employee ${answer.emp} was successfully removed!`);
+              empNames.splice( empNames.findIndex(  (emp) => emp === answer.emp) , 1);  
               doSomething();  
             }
           );
@@ -246,12 +251,11 @@ function remDepartment() {
 function updateEmpRole() {
     inquirer.prompt(updateEmpRoleQuestions)
     .then(function (answer) {
-        
-        let pickedEmp = employees.find( emp => emp.getFullName() === answer.emp);
-        console.log(pickedEmp, answer);  
-        let id = pickedEmp.id;    
+        const {emp, role} = answer; 
         connection.query(
-            `UPDATE FROM employee WHERE id = ${id}`,
+            `SELECT id INTO @roleid FROM role WHERE title = "${role}";
+            SELECT id INTO @empid FROM allemp WHERE fullname = "${emp}";
+            UPDATE employee SET role_id = @roleid WHERE = @empid`,
             function (err) {
               if (err) throw err;
               console.log("The employee was successfully updated!");
@@ -264,12 +268,11 @@ function updateEmpRole() {
 function updateEmpManager() {
     inquirer.prompt(updateEmpMgrQuestions)
     .then(function (answer) {
-
-        let pickedEmp = employees.find( emp => emp.getFullName() === answer.emp);
-        console.log(pickedEmp, answer);  
-        let id = pickedEmp.id;    
+        const {emp, mgr} = answer; 
         connection.query(
-            `UPDATE FROM employee WHERE id = ${id}.....`,
+            `SELECT id INTO @mgrid FROM allemp WHERE fullname = "${mgr}";
+             SELECT id INTO @empid FROM allemp WHERE fullname = "${emp}";
+             UPDATE employee SET manager_id = @mgrid WHERE id = @empid`,
             function (err) {
               if (err) throw err;
               console.log("The employee was successfully updated!");
@@ -316,14 +319,6 @@ function start() {
          
         loadData.loadRoles().then( function (roles) {
             roleNames = roles.map ( role => role[1]);  
-            updateEmpRoleQuestions = [
-                {
-                    type: "list", 
-                    name: "role",
-                    message: "Select the role for this employee:", 
-                    choices: roleNames
-                }
-            ];
             remRoleQuestions = [
                 {
                     type: "list", 
@@ -368,22 +363,13 @@ function start() {
                     }
                 ];
                 
-                updateEmpQuestions = [
+                updateEmpMgrQuestions = [
                     {
                         type: "list",
                         name: "emp", 
                         message: "Which employee do you want to update?",
                         choices: empNames
                     },
-                    {
-                        type: "list", 
-                        name: "emp", 
-                        message: "Would you like to update manager or role?", 
-                        choices: ["manager","role"]
-                    }
-                ];
-                
-                updateEmpMgrQuestions = [
                     {
                         type: "list",
                         name: "mgr",
@@ -393,6 +379,12 @@ function start() {
                 ];
                 
                 updateEmpRoleQuestions = [
+                    {
+                        type: "list",
+                        name: "emp", 
+                        message: "Which employee do you want to update?",
+                        choices: empNames
+                    },
                     {
                         type: "list", 
                         name: "role",
@@ -407,48 +399,6 @@ function start() {
                         name: "emp", 
                         message: "Which employee do you want to remove?",
                         choices: empNames
-                    }
-                ];
-                
-                updateEmpQuestions = [
-                    {
-                        type: "list",
-                        name: "emp", 
-                        message: "Which employee do you want to update?",
-                        choices: empNames
-                    },
-                    {
-                        type: "list", 
-                        name: "emp", 
-                        message: "Would you like to update manager or role?", 
-                        choices: ["manager","role"]
-                    }
-                ];
-                
-                updateEmpMgrQuestions = [
-                    {
-                        type: "list",
-                        name: "mgr",
-                        message: "Who is the manager of this employee?",
-                        choices: empNames
-                    }
-                ];
-
-                updateEmpMgrQuestions = [
-                    {
-                        type: "list",
-                        name: "mgr",
-                        message: "Who is the manager of this employee?",
-                        choices: empNames
-                    }
-                ];
-                
-                updateEmpRoleQuestions = [
-                    {
-                        type: "list", 
-                        name: "role",
-                        message: "Select the role for this employee:", 
-                        choices: roleNames
                     }
                 ];
 
@@ -495,8 +445,6 @@ function doSomething() {
                updateEmpRole(); break;   
             case "Update employee manager": 
                 updateEmpManager(); break;  
-            case "Update role salary":
-                updateRoleSalary(); break; 
             case "View department utilized budget":
                 showDepartmentSalaries(); break;   
             case "Quit":  let i = 1;  
