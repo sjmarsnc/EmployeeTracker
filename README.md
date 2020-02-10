@@ -18,7 +18,6 @@ List of tasks you can do:
 * Remove an employee
 * Update the role of an employee
 * Update the manager of an employee
-* Update the salary associated with a role 
 
 The data is stored in tables with keys linking them as shown below:  
 
