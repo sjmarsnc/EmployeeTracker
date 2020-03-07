@@ -126,14 +126,7 @@ const addDept = async () => {
 function showAllEmps(orderClause) {
   if (orderClause === undefined) orderClause = '';
   connection.query(
-    `SELECT E.id, E.first_name, E.last_name, E.role_id, E.manager_id,
-       R.title AS title, R.salary AS salary, 
-       D.name AS department, 
-       CONCAT(M.first_name, ' ', M.last_name) AS manager   
-      FROM employee AS E 
-        LEFT JOIN role AS R ON E.role_id = R.id  
-        LEFT JOIN department AS D ON R.department_id = D.id
-        LEFT JOIN employee AS M on E.manager_id = M.id ${orderClause}`,
+    `SELECT * FROM allemp ${orderClause}`,
     (err, res) => {
       if (err) console.log(err);
       let title = "\nAll Employees ";
