@@ -5,6 +5,8 @@
 This application uses data in a mySQL server to store employee information and allows
 the user to perform common Human Resources tasks such as adding and removing an employee, setting up new departments and job roles, changing salaries, etc.  
 
+Use the appasync.js file to start the server 
+
 List of tasks you can do: 
 * Display all employees in a table 
 * Display all employees sorted by department
@@ -16,8 +18,11 @@ List of tasks you can do:
 * Add a department
 * Add a role 
 * Remove an employee
+* Remove a department 
+* Remove a role 
 * Update the role of an employee
 * Update the manager of an employee
+* Update the salary of a role 
 
 The data is stored in tables with keys linking them as shown below:  
 
