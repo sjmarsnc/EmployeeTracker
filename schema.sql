@@ -46,7 +46,7 @@ CREATE TABLE employee
 CREATE VIEW allemp AS
   SELECT E.id, E.first_name, E.last_name, E.role_id, E.manager_id,
     CONCAT (E.first_name, ' ', E.last_name) as fullname,
-          R.title AS role, R.salary AS salary,
+          R.title AS title, R.salary AS salary,
           D.name AS department,
           CONCAT(M.first_name, ' ', M.last_name) AS manager
     FROM employee AS E
