@@ -1,4 +1,8 @@
 // var mysql = require("mysql");
+
+// if you are lazy and don't want to type inquirer.prompt every time
+// const { prompt } = require('inquirer'); 
+
 var inquirer = require("inquirer");
 var Employee = require("./lib/Employee");
 const cTable = require('console.table');
@@ -122,14 +126,7 @@ const addDept = async () => {
 function showAllEmps(orderClause) {
   if (orderClause === undefined) orderClause = '';
   connection.query(
-    `SELECT E.id, E.first_name, E.last_name, E.role_id, E.manager_id,
-       R.title AS role, R.salary AS salary, 
-       D.name AS department, 
-       CONCAT(M.first_name, ' ', M.last_name) AS manager   
-      FROM employee AS E 
-        INNER JOIN role AS R ON E.role_id = R.id  
-        INNER JOIN department AS D ON R.department_id = D.id
-        INNER JOIN employee AS M on E.manager_id = M.id ${orderClause}`,
+    `SELECT * FROM allemp ${orderClause}`,
     (err, res) => {
       if (err) console.log(err);
       let title = "\nAll Employees ";
@@ -140,9 +137,10 @@ function showAllEmps(orderClause) {
           return {
             "First Name": emp.first_name,
             "Last Name": emp.last_name,
+            "Department": emp.department,
+            "Title": emp.title,
             "Salary": emp.salary,
             "Manager": emp.manager,
-            "Department": emp.department
           };
         }));
 

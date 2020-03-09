@@ -11,11 +11,13 @@ var connection = mysql.createConnection({
     user: "root",
   
     // Your password
-    password: "Emrys1960!",
+    password: "",
     database: "employee_db",
     multipleStatements: true
   });
   
-
+  // test with this after homework is graded 
+  // connection.connect(); 
+  // connection.query = util.promisify(connection.query); 
 
   module.exports = connection;
