@@ -32,7 +32,7 @@ CREATE TABLE employee
   last_name VARCHAR (40) NOT NULL, 
   role_id INT NOT NULL, 
   manager_id INT, 
-  INDEX emp_ind (id)
+  INDEX emp_ind (id),
   CONSTRAINT fk_role FOREIGN KEY 
     (role_id) REFERENCES role (id) 
     ON DELETE CASCADE, 
